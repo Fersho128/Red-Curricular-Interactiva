@@ -1,88 +1,93 @@
-const cursos = {
-  // --- PRIMER SEMESTRE ---
-  "Teoría de la Comunicación": {
-    creditos: 3,
-    desbloquea: ["Teoría y Métodos del Diseño 1"],
-    requisitos: [],
-    semestre: "1-1"
-  },
-  "Métodos y Técnicas de Investigación": {
-    creditos: 3,
-    desbloquea: ["Sociología y Desarrollo Humano", "Teoría y Métodos del Diseño 1", "Diseño Arquitectónico 1"],
-    requisitos: [],
-    semestre: "1-1"
-  },
-  "Fundamentos del Diseño": {
-    creditos: 5,
-    desbloquea: ["Teoría y Métodos del Diseño 1", "Diseño Arquitectónico 1"],
-    requisitos: [],
-    semestre: "1-1"
-  },
-  "Medios de Expresión": {
-    creditos: 4,
-    desbloquea: ["Diseño Arquitectónico 1", "Dibujo Natural"],
-    requisitos: [],
-    semestre: "1-1"
-  },
-  "Dibujo Geométrico": {
-    creditos: 4,
-    desbloquea: ["Diseño Arquitectónico 1", "Dibujo Técnico", "Dibujo Proyectual"],
-    requisitos: [],
-    semestre: "1-1"
-  },
-  "Geometria": {
-    creditos: 4,
-    desbloquea: ["Diseño Arquitectónico 1", "Dibujo Técnico", "Dibujo Proyectual"],
-    requisitos: [],
-    semestre: "1-1"
-  },
-  "Matemática 1": {
-    creditos: 4,
-    desbloquea: ["Matemática 2"],
-    requisitos: [],
-    semestre: "1-1"
-  },
-  
-  // --- SEGUNDO SEMESTRE ---
-  "Sociología y Desarrollo Humano": {
-    creditos: 3,
-    desbloquea: ["Ecología Humana"],
-    requisitos: ["Métodos y Técnicas de Investigación"],
-    semestre: "1-2"
-  },
-  "Teoría y Métodos del Diseño 1": {
-    creditos: 3,
-    desbloquea: ["Historia de la Arquitectura y el Arte 1", "Diseño Arquitectónico 2"],
-    requisitos: ["Teoría de la Comunicación", "Métodos y Técnicas de Investigación", "Fundamentos del Diseño"],
-    semestre: "1-2"
-  },
-  "Diseño Arquitectónico 1": {
-    creditos: 6,
-    desbloquea: ["Diseño Arquitectónico 2"],
-    requisitos: ["Fundamentos del Diseño", "Métodos y Técnicas de Investigación", "Medios de Expresión", "Dibujo Geométrico", "Geometria"],
-    semestre: "1-2"
-  },
-  "Dibujo Natural": {
-    creditos: 4,
-    desbloquea: ["Diseño Arquitectónico 2", "Presentación 1"],
-    requisitos: ["Medios de Expresión"],
-    semestre: "1-2"
-  },
-  "Dibujo Técnico": {
-    creditos: 5,
-    desbloquea: ["Diseño Arquitectónico 2", "Presentación 1", "Herramientas Digitales 1", "Topografía"],
-    requisitos: ["Dibujo Geométrico", "Geometria"],
-    semestre: "1-2"
-  },
-  "Dibujo Proyectual": {
-    creditos: 4,
-    desbloquea: ["Diseño Arquitectónico 2", "Presentación 1", "Herramientas Digitales 1", "Topografía"],
-    requisitos: ["Dibujo Geométrico", "Geometria"],
-    semestre: "1-2"
-  },
-  "Matemática 2": {
-    creditos: 4,
-    desbloquea: ["Topografía", "Física 1"],
-    requisitos: ["Matemática 1"],
-    semestre: "1-2"
-  },
+document.addEventListener('DOMContentLoaded', () => {
+    const courses = document.querySelectorAll('.course');
+
+    // Función para obtener el estado guardado de los cursos
+    const getSavedCourseStates = () => {
+        try {
+            const savedStates = localStorage.getItem('courseStates');
+            return savedStates ? JSON.parse(savedStates) : {};
+        } catch (e) {
+            console.error("Error al leer de localStorage:", e);
+            return {};
+        }
+    };
+
+    // Función para guardar el estado de los cursos
+    const saveCourseStates = (states) => {
+        try {
+            localStorage.setItem('courseStates', JSON.stringify(states));
+        } catch (e) {
+            console.error("Error al escribir en localStorage:", e);
+        }
+    };
+
+    let courseStates = getSavedCourseStates();
+
+    // Función para verificar si un curso está aprobado
+    const isApproved = (courseId) => {
+        return courseStates[courseId] === 'approved';
+    };
+
+    // Función para verificar si todos los prerrequisitos de un curso están aprobados
+    const checkPrerequisites = (course) => {
+        const prerequisitesAttr = course.dataset.prerequisites;
+        if (!prerequisitesAttr) {
+            return true; // No tiene prerrequisitos, siempre está disponible
+        }
+        const prerequisites = prerequisitesAttr.split(',').map(req => req.trim());
+        return prerequisites.every(reqId => isApproved(reqId));
+    };
+
+    // Función para actualizar el estado visual y de interactividad de un curso
+    const updateCourseState = (course) => {
+        const courseId = course.dataset.id;
+        const approveBtn = course.querySelector('.approve-btn');
+
+        if (isApproved(courseId)) {
+            course.classList.add('approved');
+            course.classList.remove('locked', 'unlocked');
+            approveBtn.textContent = 'Aprobado';
+            approveBtn.disabled = true;
+        } else if (checkPrerequisites(course)) {
+            course.classList.add('unlocked');
+            course.classList.remove('locked', 'approved');
+            approveBtn.textContent = 'Aprobar';
+            approveBtn.disabled = false;
+        } else {
+            course.classList.add('locked');
+            course.classList.remove('unlocked', 'approved');
+            approveBtn.textContent = 'Bloqueado';
+            approveBtn.disabled = true;
+        }
+    };
+
+    // Inicializar el estado de todos los cursos al cargar la página
+    courses.forEach(course => {
+        updateCourseState(course);
+    });
+
+    // Función para procesar la aprobación de un curso
+    const approveCourse = (courseId) => {
+        courseStates[courseId] = 'approved';
+        saveCourseStates(courseStates);
+        updateAllCourses(); // Volver a verificar todos los cursos después de un cambio
+    };
+
+    // Función para actualizar el estado de todos los cursos (útil después de un cambio)
+    const updateAllCourses = () => {
+        courses.forEach(course => {
+            updateCourseState(course);
+        });
+    };
+
+    // Añadir event listeners a los botones
+    courses.forEach(course => {
+        const approveBtn = course.querySelector('.approve-btn');
+        approveBtn.addEventListener('click', () => {
+            const courseId = course.dataset.id;
+            if (!isApproved(courseId)) { // Solo si no está ya aprobado
+                approveCourse(courseId);
+            }
+        });
+    });
+});
